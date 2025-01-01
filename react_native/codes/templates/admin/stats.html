@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Thống kê người dùng</h1>
+<form method="get">
+    <label for="from_date">Từ ngày:</label>
+    <input type="date" name="from_date" value="{{ from_date }}">
+    <label for="to_date">Đến ngày:</label>
+    <input type="date" name="to_date" value="{{ to_date }}">
+    <button type="submit">Lọc</button>
+</form>
+
+<h2>Kết quả thống kê</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Vai trò</th>
+            <th>Số lượng</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stat in stats.statistics %}
+        <tr>
+            <td>{{ stat.role }}</td>
+            <td>{{ stat.count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<canvas id="statisticsChart"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const data = {
+        labels: [{% for stat in stats.statistics %}"{{ stat.role }}",{% endfor %}],
+        datasets: [{
+            label: 'Số lượng người dùng',
+            data: [{% for stat in stats.statistics %}{{ stat.count }},{% endfor %}],
+            backgroundColor: ['#36a2eb', '#ff6384', '#4bc0c0']
+        }]
+    };
+
+    const config = {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Thống kê người dùng'
+                }
+            }
+        }
+    };
+
+    const ctx = document.getElementById('statisticsChart').getContext('2d');
+    new Chart(ctx, config);
+</script>
+{% endblock %}
