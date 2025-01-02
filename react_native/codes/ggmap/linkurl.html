@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mở chỉ đường Google Maps</title>
+</head>
+<body>
+    <h3>Nhập tọa độ để mở chỉ đường trên Google Maps</h3>
+    <form onsubmit="generateDirections(); return false;">
+        <label>Latitude:</label>
+        <input type="text" id="latitude" placeholder="Nhập vĩ độ" required />
+        <label>Longitude:</label>
+        <input type="text" id="longitude" placeholder="Nhập kinh độ" required />
+        <button type="submit">Chỉ đường</button>
+    </form>
+
+    <p id="map-link"></p>
+
+    <script>
+        function generateDirections() {
+            const lat = document.getElementById("latitude").value;
+            const lng = document.getElementById("longitude").value;
+
+            // Tạo URL chỉ đường
+            const uri = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+
+            // Hiển thị liên kết
+            const linkElement = document.getElementById("map-link");
+            linkElement.innerHTML = `<a href="${uri}" target="_blank">Mở chỉ đường trong Google Maps</a>`;
+        }
+    </script>
+</body>
+</html>

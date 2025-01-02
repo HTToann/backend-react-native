@@ -78,6 +78,21 @@ class LocationAdmin(admin.ModelAdmin):
     maps_link.short_description = "Google Maps Link"
 
 
+class ImageAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "display_image",
+    )
+    readonly_fields = ["display_image"]
+
+    def display_image(self, obj):
+        return mark_safe(
+            f'<img src="{obj.image.url}" width="100" height="100" style="border-radius: 50%;" />'
+        )
+
+    display_image.short_description = "Image"
+
+
 class LandlordProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "approved", "location")
     list_filter = ("approved",)
@@ -98,4 +113,4 @@ admin_site.register(Notification)
 admin_site.register(Post)
 admin_site.register(LandLordProfile, LandlordProfileAdmin)
 admin_site.register(Location, LocationAdmin)
-admin_site.register(Image)
+admin_site.register(Image, ImageAdmin)

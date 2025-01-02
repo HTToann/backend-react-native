@@ -15,6 +15,7 @@ from codes.models import (
 )
 from codes import perm
 from codes import pagination
+from codes import apis
 from django.core.mail import send_mail
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -311,6 +312,37 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
                 return Response(serializers.CommentSerializer(comment, many=True).data)
         except Exception as e:
             raise
+
+    @action(methods=["get"], url_path="get-location", detail=True)
+    def get_location(self, request, pk):
+        try:
+            with transaction.atomic():
+                post = self.get_object()
+                if post.type != "rent":
+                    return Response(
+                        {
+                            "error": "Location is only available for posts with type 'rent'."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                address = f"{post.location.street},{post.location.ward},{post.location.district},{post.location.city}"
+                latitude, longitude = apis.get_location_from_maps(address)
+                if latitude and longitude:
+                    url = f"https://www.google.com/maps/dir/?api=1&destination={latitude},{longitude}&travelmode=driving"
+                    return Response(
+                        {"message": "Location fetched successfully", "url": url},
+                        status=status.HTTP_200_OK,
+                    )
+                else:
+                    return Response(
+                        {"error": "Unable to fetch location from Google Maps"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class NotificationViewSet(viewsets.ViewSet):
