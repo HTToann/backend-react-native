@@ -1,4 +1,6 @@
+import cloudinary
 from rest_framework import serializers
+from asgiref.sync import async_to_sync
 from codes.models import (
     User,
     Location,
@@ -47,6 +49,9 @@ class UserSerializer(serializers.ModelSerializer):
     images = serializers.ListField(
         child=serializers.ImageField(), required=False, allow_empty=False, min_length=3
     )
+    avatar = serializers.ImageField(
+        required=True
+    )  # Bắt buộc người dùng phải upload avatar
 
     class Meta:
         model = User
@@ -114,17 +119,24 @@ class UserSerializer(serializers.ModelSerializer):
                     "city": data.pop("city", ""),
                 }
                 images_data = data.pop("images", [])
+                avatar_file = data.pop("avatar")  # Lấy ảnh avatar
                 role = data.get("role")
+
+                # Tải avatar lên Cloudinary
+                avatar_upload = async_to_sync(helper.upload_images_to_cloudinary)(
+                    [avatar_file], upload_preset="avatar_preset"
+                )
                 # Băm password
                 user = User(**data)
                 user.set_password(user.password)
                 user.save()
-
+                image_urls = []
                 if role == "landlord":
+                    image_urls = async_to_sync(helper.upload_images_to_cloudinary)(
+                        images_data, upload_preset="image_preset"
+                    )
                     location = helper.create_or_get_location(location_data)
-                    images = helper.create_images_type(images_data, type="banner")
-                    # Tạo LandLordProfile
-                    helper.create_landlord_profile(user, location, images)
+                    helper.create_landlord_profile(user, location, image_urls)
 
                 return user  # Trả về user đã được tạo
         except Exception as e:
@@ -222,9 +234,16 @@ class PostSerializer(serializers.ModelSerializer):
                 # Xử lý Images
                 images_data = data.pop("uploaded_images", [])
                 post = Post.objects.create(location=location, **data)
-                images = helper.create_images_type(images_data, type="post")
+                image_urls = async_to_sync(helper.create_images_type)(
+                    images_data, upload_preset="image_preset"
+                )
+                images = []
+                for url in image_urls:
+                    image = Image.objects.create(image=url, image_type="post")
+                    images.append(image)
                 post.images.set(images)
                 post.save()
+                # images = helper.create_images_type(images_data, type="post")
                 return post
         except Exception as e:
             raise serializers.ValidationError(f"Error creating post: {e}")

@@ -41,12 +41,12 @@ def get_location_from_maps(address):
         return None, None
 
 
-address = "16 Đoàn Nguyễn Tuấn, Tân Quý Tây, Bình Chánh, Hồ Chí Minh, Việt Nam"
-latitude, longitude = get_location_from_maps(address)
+# address = "16 Đoàn Nguyễn Tuấn, Tân Quý Tây, Bình Chánh, Hồ Chí Minh, Việt Nam"
+# latitude, longitude = get_location_from_maps(address)
 
-if latitude and longitude:
-    print(f"Tọa độ của địa chỉ '{address}':")
-    print(f"Vĩ độ: {latitude}")
-    print(f"Kinh độ: {longitude}")
-else:
-    print("Không thể lấy tọa độ cho địa chỉ này.")
+# if latitude and longitude:
+#     print(f"Tọa độ của địa chỉ '{address}':")
+#     print(f"Vĩ độ: {latitude}")
+#     print(f"Kinh độ: {longitude}")
+# else:
+#     print("Không thể lấy tọa độ cho địa chỉ này.")

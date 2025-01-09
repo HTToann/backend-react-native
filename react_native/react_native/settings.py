@@ -29,6 +29,7 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
+# Sử dụng Redis làm broker
 
 INSTALLED_APPS = [
     "django.contrib.admin",

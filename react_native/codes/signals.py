@@ -3,6 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import User, LandLordProfile
 import pdb
+from celery import shared_task
 
 
 @receiver(post_save, sender=User)
