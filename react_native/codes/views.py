@@ -293,12 +293,6 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
         except Exception as e:
             raise
 
-    # @action(methods=["get"], url_path="get-comments", detail=True)
-    # def get_comments(self, request, pk):
-    #     post = self.get_object()
-    #     comments = Comment.objects.filter(post=post, parent=None)  # Lấy bình luận gốc
-    #     serializer = serializers.CommentSerializer(comments, many=True)
-    #     return Response(serializer.data)
     @action(methods=["get"], url_path="get-comments", detail=True)
     def get_comments(self, request, pk):
         try:
@@ -338,6 +332,47 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
                         {"error": "Unable to fetch location from Google Maps"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_post", detail=True)
+    def delete_post(self, request, pk):
+        try:
+            with transaction.atomic():
+                post = self.get_object()
+                if post.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this post"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                post.delete()
+                return Response(
+                    {"Delete this post successfully"}, status=status.HTTP_204_NO_CONTENT
+                )
+        except:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_comment", detail=True)
+    def delete_comment(self, request, pk):
+        try:
+            with transaction.atomic():
+                comment = Comment.objects.get(pk=pk)
+                if comment.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this comment"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                comment.delete()
+                return Response(
+                    {"Delete this comment successfully"},
+                    status=status.HTTP_204_NO_CONTENT,
+                )
         except Exception as e:
             return Response(
                 {"error": f"An error occurred: {e}"},
@@ -406,7 +441,7 @@ class FollowViewSet(viewsets.ViewSet):
         except Exception as e:
             raise
 
-    @action(methods=["post"], url_path="unfollow", detail=True)
+    @action(methods=["delete"], url_path="unfollow", detail=True)
     def unfollow(self, request, pk=None):
         try:
             with transaction.atomic():
