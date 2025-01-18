@@ -126,6 +126,7 @@ class UserSerializer(serializers.ModelSerializer):
                 avatar_upload = async_to_sync(helper.upload_images_to_cloudinary)(
                     [avatar_file], upload_preset="avatar_preset"
                 )
+                data["avatar"] = avatar_upload[0]
                 # Băm password
                 user = User(**data)
                 user.set_password(user.password)
@@ -158,12 +159,16 @@ class PostSerializer(serializers.ModelSerializer):
         child=serializers.ImageField(), required=False, allow_empty=True
     )
     images = ImageSerializer(required=False, many=True)
+    username = serializers.CharField(
+        source="user.username", read_only=True
+    )  # Thêm trường này
 
     class Meta:
         model = Post
         fields = [
             "id",
             "user",
+            "username",
             "content",
             "price",
             "people",
@@ -283,10 +288,19 @@ class PostDetailSerializer(PostSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField()
+    username = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "content", "user", "parent", "replies", "created_date"]
+        fields = [
+            "id",
+            "content",
+            "user",
+            "username",
+            "parent",
+            "replies",
+            "created_date",
+        ]
 
     def validate(self, data):
         try:
@@ -344,7 +358,7 @@ class NotificationSerializer(serializers.ModelSerializer):
                     obj.notification_type == "comment_reply"
                     or obj.notification_type == "comment"
                 ):
-                    return reverse(
+                    return reverse(       
                         "comment_detail-detail", kwargs={"pk": obj.object_id}
                     )
                 elif obj.notification_type == "new_post":
