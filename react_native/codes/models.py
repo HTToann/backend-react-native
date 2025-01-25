@@ -215,32 +215,3 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Thông báo cho {self.user.username} : {self.message[:50]}"
-
-    # def get_url(self):
-    #     try:
-    #         if self.notification_type == "comment_reply":
-    #             return reverse(
-    #                 "comment_detail", kwargs={"pk": self.object_id}
-    #             )  # URL cho bình luận
-    #         elif self.notification_type == "new_post":
-    #             return reverse(
-    #                 "post_detail", kwargs={"pk": self.object_id}
-    #             )  # URL cho bài viết
-    #     except NoReverseMatch:
-    #         return "#"  # Trả về dấu "#" nếu không tìm thấy URL
-    #     return "#"
-
-    def mark_as_read(self):
-        self.read_status = True
-        self.save()
-
-    # def clean(self):
-    #     # Logic kiểm tra số lượng hình ảnh khi type là 'rent'
-    #     if self.type == "rent" and self.pk and self.images.count() < 3:
-    #         raise ValidationError(
-    #             "Bài đăng 'Cho Thuê' bắt buộc phải có ít nhất 3 hình ảnh."
-    #         )
-
-    # def save(self, *args, **kwargs):
-    #     is_new = not self.pk  # Kiểm tra nếu bài đăng là mới
-    #     super().save(*args, **kwargs)  # Lưu bài đăng trước

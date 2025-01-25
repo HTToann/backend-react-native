@@ -95,22 +95,31 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         try:
             with transaction.atomic():
                 user = request.user
-                if request.data.get("password") != request.data.get("confirm_password"):
+                data = request.data
+                old_password = data.get("old_password")
+                new_password = data.get("new_password")
+                confirm_password = data.get("confirm_password")
+                if not old_password or not user.check_password(old_password):
+                    return Response(
+                        {"message": "Old Password is incorrect."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if new_password != confirm_password:
                     return Response(
                         {"message": "Passwords do not match."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                if not request.data.get("password"):
+                if not new_password:
                     return Response(
                         {"message": "Password cannot be empty."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                if len(request.data.get("password")) < 6:
+                if len(new_password) < 6:
                     return Response(
                         {"message": "Password must be at least 6 characters long."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                user.set_password(request.data.get("password"))
+                user.set_password(new_password)
                 user.save()
                 return Response({"Password has been changed."})
         except Exception as e:
@@ -250,55 +259,51 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def add_comments(self, request, pk):
-        try:
-            with transaction.atomic():
-                post = self.get_object()
-                user = request.user
-                content = request.data.get("content")
-                parent_id = request.data.get("parent")
-                if not content:
-                    """này để frontend ràng buộc sẽ hay hơn, nếu comment là rỗng thì lock cái button đăng comment"""
-                    return Response(
-                        {"error": "Content is required for a comment."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                # Xử lý parent comment (nếu có)
-                parent = None
-                if parent_id:
-                    try:
-                        parent = Comment.objects.get(id=parent_id, post=post)
-                    except Comment.DoesNotExist:
+        def add_comments(self, request, pk):
+            try:
+                with transaction.atomic():
+                    post = self.get_object()
+                    user = request.user
+                    content = request.data.get("content")
+                    parent_id = request.data.get("parent")
+                    if not content:
+                        """này để frontend ràng buộc sẽ hay hơn, nếu comment là rỗng thì lock cái button đăng comment"""
                         return Response(
-                            {"error": "Parent comment not found."},
+                            {"error": "Content is required for a comment."},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
-                comment = Comment.objects.create(
-                    user=user, post=post, content=content, parent=parent
-                )
-                Notification.objects.create(
-                    user=post.user,
-                    notification_type="comment",
-                    message=f"You have comment on your post: {post.content[:50]}",
-                    content_object=comment,
-                )
-                if parent:
-                    Notification.objects.create(
-                        user=parent.user,
-                        notification_type="comment_reply",
-                        message=f"{user.username} replied to your comment on: {post.content[:50]}",
-                        content_object=parent,
+                    # Xử lý parent comment (nếu có)
+                    parent = None
+                    if parent_id:
+                        try:
+                            parent = Comment.objects.get(id=parent_id, post=post)
+                        except Comment.DoesNotExist:
+                            return Response(
+                                {"error": "Parent comment not found."},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                    comment = Comment.objects.create(
+                        user=user, post=post, content=content, parent=parent
                     )
-                return Response(serializers.CommentSerializer(comment).data)
-        except Exception as e:
-            raise
+                    Notification.objects.create(
+                        user=post.user,
+                        notification_type="comment",
+                        message=f"You have comment on your post: {post.content[:50]}",
+                        # content_object=comment,
+                        content_object=post,  # Gắn bài viết thay vì comment
+                    )
+                    if parent:
+                        Notification.objects.create(
+                            user=parent.user,
+                            notification_type="comment_reply",
+                            message=f"{user.username} replied to your comment on: {post.content[:50]}",
+                            # content_object=parent,
+                            content_object=post,  # Gắn bài viết thay vì comment
+                        )
+                    return Response(serializers.CommentSerializer(comment).data)
+            except Exception as e:
+                raise
 
-    # @action(methods=["get"], url_path="get-comments", detail=True)
-    # def get_comments(self, request, pk):
-    #     post = self.get_object()
-    #     comments = Comment.objects.filter(post=post, parent=None)  # Lấy bình luận gốc
-    #     serializer = serializers.CommentSerializer(comments, many=True)
-    #     return Response(serializer.data)
     @action(methods=["get"], url_path="get-comments", detail=True)
     def get_comments(self, request, pk):
         try:
@@ -338,6 +343,47 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
                         {"error": "Unable to fetch location from Google Maps"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_post", detail=True)
+    def delete_post(self, request, pk):
+        try:
+            with transaction.atomic():
+                post = self.get_object()
+                if post.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this post"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                post.delete()
+                return Response(
+                    {"Delete this post successfully"}, status=status.HTTP_204_NO_CONTENT
+                )
+        except:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_comment", detail=True)
+    def delete_comment(self, request, pk):
+        try:
+            with transaction.atomic():
+                comment = Comment.objects.get(pk=pk)
+                if comment.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this comment"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                comment.delete()
+                return Response(
+                    {"Delete this comment successfully"},
+                    status=status.HTTP_204_NO_CONTENT,
+                )
         except Exception as e:
             return Response(
                 {"error": f"An error occurred: {e}"},
@@ -406,7 +452,19 @@ class FollowViewSet(viewsets.ViewSet):
         except Exception as e:
             raise
 
-    @action(methods=["post"], url_path="unfollow", detail=True)
+    @action(methods=["get"], url_path="is-following", detail=True)
+    def is_following(self, request, pk=None):
+        """
+        Kiểm tra xem người dùng hiện tại có theo dõi landlord hay không.
+        """
+        follower = request.user
+        followed = get_object_or_404(User, pk=pk, role="landlord")
+        is_following = Follow.objects.filter(
+            follower=follower, followed=followed
+        ).exists()
+        return Response({"is_following": is_following}, status=status.HTTP_200_OK)
+
+    @action(methods=["delete"], url_path="unfollow", detail=True)
     def unfollow(self, request, pk=None):
         try:
             with transaction.atomic():

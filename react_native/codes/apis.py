@@ -41,7 +41,7 @@ def get_location_from_maps(address):
         return None, None
 
 
-# address = "16 Đoàn Nguyễn Tuấn, Tân Quý Tây, Bình Chánh, Hồ Chí Minh, Việt Nam"
+# address = "839 Lê Văn Lương, Phước Kiểng,Nhà Bè,Ho Chi Minh"
 # latitude, longitude = get_location_from_maps(address)
 
 # if latitude and longitude:

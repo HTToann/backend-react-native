@@ -126,6 +126,7 @@ class UserSerializer(serializers.ModelSerializer):
                 avatar_upload = async_to_sync(helper.upload_images_to_cloudinary)(
                     [avatar_file], upload_preset="avatar_preset"
                 )
+                data["avatar"] = avatar_upload[0]
                 # Băm password
                 user = User(**data)
                 user.set_password(user.password)
@@ -158,12 +159,16 @@ class PostSerializer(serializers.ModelSerializer):
         child=serializers.ImageField(), required=False, allow_empty=True
     )
     images = ImageSerializer(required=False, many=True)
+    username = serializers.CharField(
+        source="user.username", read_only=True
+    )  # Thêm trường này
 
     class Meta:
         model = Post
         fields = [
             "id",
             "user",
+            "username",
             "content",
             "price",
             "people",
@@ -283,10 +288,19 @@ class PostDetailSerializer(PostSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField()
+    username = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "content", "user", "parent", "replies", "created_date"]
+        fields = [
+            "id",
+            "content",
+            "user",
+            "username",
+            "parent",
+            "replies",
+            "created_date",
+        ]
 
     def validate(self, data):
         try:
@@ -325,7 +339,7 @@ class FollowSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    url = serializers.SerializerMethodField()
+    post_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
@@ -334,21 +348,14 @@ class NotificationSerializer(serializers.ModelSerializer):
             "message",
             "content_type",
             "read_status",
-            "url",
+            "post_id",
         ]
 
-    def get_url(self, obj):
-        try:
-            with transaction.atomic():
-                if (
-                    obj.notification_type == "comment_reply"
-                    or obj.notification_type == "comment"
-                ):
-                    return reverse(
-                        "comment_detail-detail", kwargs={"pk": obj.object_id}
-                    )
-                elif obj.notification_type == "new_post":
-                    return reverse("post_detail-detail", kwargs={"pk": obj.object_id})
-        except NoReverseMatch:
-            return "#"  # Trả về URL mặc định nếu không tìm thấy
-        return "#"
+    def get_post_id(self, obj):
+        # Kiểm tra nếu content_object là Post, trả về id của Post
+        if isinstance(obj.content_object, Post):
+            return obj.content_object.id
+        # Nếu content_object là Comment, trả về id của bài viết liên quan
+        elif isinstance(obj.content_object, Comment):
+            return obj.content_object.post.id
+        return None

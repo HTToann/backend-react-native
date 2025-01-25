@@ -10,6 +10,8 @@ from codes.models import (
     Location,
     Image,
 )
+from django.utils.decorators import method_decorator
+from django.contrib.admin.views.decorators import staff_member_required
 
 # hoc
 from django.utils.html import mark_safe
@@ -25,8 +27,14 @@ class MyAppAdmin(admin.AdminSite):
     index_title = "Welcome to My App Admin Portal"
 
     def get_urls(self):
-        return [path("stats/", self.stats)] + super().get_urls()
+        return [
+            path("stats/", self.stats, name="stats"),
+            path(
+                "pending_landlords/", self.pending_landlords, name="pending-landlords"
+            ),
+        ] + super().get_urls()
 
+    @method_decorator(staff_member_required)
     def stats(self, request):
         from_date = request.GET.get("from_date", None)
         to_date = request.GET.get("to_date", None)
@@ -51,6 +59,19 @@ class MyAppAdmin(admin.AdminSite):
             "to_date": to_date,
         }
         return TemplateResponse(request, "admin/stats.html", {"stats": stats})
+
+    @method_decorator(staff_member_required)
+    def pending_landlords(self, request):
+        landlords = LandLordProfile.objects.filter(approved=False)
+
+        # Lấy thông tin người dùng hiện tại từ request.user
+        current_user = request.user
+
+        return TemplateResponse(
+            request,
+            "admin/pending_landlords.html",
+            {"landlords": landlords, "current_user": current_user},
+        )
 
 
 class UserAdmin(admin.ModelAdmin):

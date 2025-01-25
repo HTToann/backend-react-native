@@ -1,0 +1,67 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Pending Landlords</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Avatar</th>
+            <th>Joined Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for landlord in landlords %}
+        <tr>
+            <td>{{ landlord.user.username }}</td>
+            <td>{{ landlord.user.email }}</td>
+            <td>
+                <img src="{{ landlord.user.avatar }}" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%;">
+            </td>
+            <td>{{ landlord.date_joined }}</td>
+            <td>
+                {% if landlord.approved %}
+                    Approved
+                {% else %}
+                    Pending
+                {% endif %}
+            </td>
+            <td>
+                <button 
+                    onclick="updateStatus('{{ landlord.id }}', true)">Approve</button>
+                <button 
+                    onclick="updateStatus('{{ landlord.id }}', false)">Reject</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    async function updateStatus(id, approved) {
+        try {
+            const response = await fetch(`/landlord-profiles/${id}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ approved: approved })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.error || "An error occurred.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("An error occurred.");
+        }
+    }
+</script>
+{% endblock %}

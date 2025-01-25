@@ -82,6 +82,8 @@ WSGI_APPLICATION = "react_native.wsgi.application"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "oauth2_provider.contrib.rest_framework.OAuth2Authentication",
+        # này để /admin/pending_landlord lấy token admin ở web django
+        "rest_framework.authentication.SessionAuthentication",
     )
 }
 # hoc
