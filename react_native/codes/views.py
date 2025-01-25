@@ -384,6 +384,48 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
                     {"Delete this comment successfully"},
                     status=status.HTTP_204_NO_CONTENT,
                 )
+                    )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_post", detail=True)
+    def delete_post(self, request, pk):
+        try:
+            with transaction.atomic():
+                post = self.get_object()
+                if post.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this post"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                post.delete()
+                return Response(
+                    {"Delete this post successfully"}, status=status.HTTP_204_NO_CONTENT
+                )
+        except:
+            return Response(
+                {"error": f"An error occurred: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(methods=["delete"], url_path="delete_comment", detail=True)
+    def delete_comment(self, request, pk):
+        try:
+            with transaction.atomic():
+                comment = Comment.objects.get(pk=pk)
+                if comment.user != request.user:
+                    return Response(
+                        {"Error": "You dont have permission to delete this comment"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                comment.delete()
+                return Response(
+                    {"Delete this comment successfully"},
+                    status=status.HTTP_204_NO_CONTENT,
+                )
         except Exception as e:
             return Response(
                 {"error": f"An error occurred: {e}"},

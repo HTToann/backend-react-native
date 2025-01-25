@@ -127,6 +127,7 @@ class UserSerializer(serializers.ModelSerializer):
                     [avatar_file], upload_preset="avatar_preset"
                 )
                 data["avatar"] = avatar_upload[0]
+                data["avatar"] = avatar_upload[0]
                 # Băm password
                 user = User(**data)
                 user.set_password(user.password)
@@ -162,12 +163,16 @@ class PostSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         source="user.username", read_only=True
     )  # Thêm trường này
+    username = serializers.CharField(
+        source="user.username", read_only=True
+    )  # Thêm trường này
 
     class Meta:
         model = Post
         fields = [
             "id",
             "user",
+            "username",
             "username",
             "content",
             "price",
@@ -289,9 +294,19 @@ class PostDetailSerializer(PostSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField()
     username = serializers.CharField(source="user.username", read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = Comment
+        fields = [
+            "id",
+            "content",
+            "user",
+            "username",
+            "parent",
+            "replies",
+            "created_date",
+        ]
         fields = [
             "id",
             "content",
