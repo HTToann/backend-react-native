@@ -259,50 +259,50 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-        def add_comments(self, request, pk):
-            try:
-                with transaction.atomic():
-                    post = self.get_object()
-                    user = request.user
-                    content = request.data.get("content")
-                    parent_id = request.data.get("parent")
-                    if not content:
-                        """này để frontend ràng buộc sẽ hay hơn, nếu comment là rỗng thì lock cái button đăng comment"""
+    def add_comments(self, request, pk):
+        try:
+            with transaction.atomic():
+                post = self.get_object()
+                user = request.user
+                content = request.data.get("content")
+                parent_id = request.data.get("parent")
+                if not content:
+                    """này để frontend ràng buộc sẽ hay hơn, nếu comment là rỗng thì lock cái button đăng comment"""
+                    return Response(
+                        {"error": "Content is required for a comment."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                # Xử lý parent comment (nếu có)
+                parent = None
+                if parent_id:
+                    try:
+                        parent = Comment.objects.get(id=parent_id, post=post)
+                    except Comment.DoesNotExist:
                         return Response(
-                            {"error": "Content is required for a comment."},
+                            {"error": "Parent comment not found."},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
-                    # Xử lý parent comment (nếu có)
-                    parent = None
-                    if parent_id:
-                        try:
-                            parent = Comment.objects.get(id=parent_id, post=post)
-                        except Comment.DoesNotExist:
-                            return Response(
-                                {"error": "Parent comment not found."},
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-                    comment = Comment.objects.create(
-                        user=user, post=post, content=content, parent=parent
-                    )
+                comment = Comment.objects.create(
+                    user=user, post=post, content=content, parent=parent
+                )
+                Notification.objects.create(
+                    user=post.user,
+                    notification_type="comment",
+                    message=f"You have comment on your post: {post.content[:50]}",
+                    # content_object=comment,
+                    content_object=post,  # Gắn bài viết thay vì comment
+                )
+                if parent:
                     Notification.objects.create(
-                        user=post.user,
-                        notification_type="comment",
-                        message=f"You have comment on your post: {post.content[:50]}",
-                        # content_object=comment,
+                        user=parent.user,
+                        notification_type="comment_reply",
+                        message=f"{user.username} replied to your comment on: {post.content[:50]}",
+                        # content_object=parent,
                         content_object=post,  # Gắn bài viết thay vì comment
                     )
-                    if parent:
-                        Notification.objects.create(
-                            user=parent.user,
-                            notification_type="comment_reply",
-                            message=f"{user.username} replied to your comment on: {post.content[:50]}",
-                            # content_object=parent,
-                            content_object=post,  # Gắn bài viết thay vì comment
-                        )
-                    return Response(serializers.CommentSerializer(comment).data)
-            except Exception as e:
-                raise
+                return Response(serializers.CommentSerializer(comment).data)
+        except Exception as e:
+            raise
 
     @action(methods=["get"], url_path="get-comments", detail=True)
     def get_comments(self, request, pk):
@@ -384,7 +384,6 @@ class PostViewSet(viewsets.ViewSet, generics.CreateAPIView):
                     {"Delete this comment successfully"},
                     status=status.HTTP_204_NO_CONTENT,
                 )
-                    )
         except Exception as e:
             return Response(
                 {"error": f"An error occurred: {e}"},
