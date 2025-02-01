@@ -127,7 +127,6 @@ class UserSerializer(serializers.ModelSerializer):
                     [avatar_file], upload_preset="avatar_preset"
                 )
                 data["avatar"] = avatar_upload[0]
-                data["avatar"] = avatar_upload[0]
                 # Băm password
                 user = User(**data)
                 user.set_password(user.password)
@@ -163,16 +162,13 @@ class PostSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         source="user.username", read_only=True
     )  # Thêm trường này
-    username = serializers.CharField(
-        source="user.username", read_only=True
-    )  # Thêm trường này
+    avatar = serializers.ImageField(source="user.avatar", read_only=True)
 
     class Meta:
         model = Post
         fields = [
             "id",
             "user",
-            "username",
             "username",
             "content",
             "price",
@@ -186,6 +182,7 @@ class PostSerializer(serializers.ModelSerializer):
             "uploaded_images",
             "images",
             "type",
+            "avatar",
         ]
         read_only_fields = ["id", "created_date", "updated_date", "user"]
         extra_kwargs = {
@@ -294,7 +291,7 @@ class PostDetailSerializer(PostSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField()
     username = serializers.CharField(source="user.username", read_only=True)
-    username = serializers.CharField(source="user.username", read_only=True)
+    avatar = serializers.ImageField(source="user.avatar", read_only=True)
 
     class Meta:
         model = Comment
@@ -303,19 +300,12 @@ class CommentSerializer(serializers.ModelSerializer):
             "content",
             "user",
             "username",
+            "avatar",
             "parent",
             "replies",
             "created_date",
         ]
-        fields = [
-            "id",
-            "content",
-            "user",
-            "username",
-            "parent",
-            "replies",
-            "created_date",
-        ]
+        read_only_fields = ["id", "created_date"]
 
     def validate(self, data):
         try:
@@ -363,8 +353,10 @@ class NotificationSerializer(serializers.ModelSerializer):
             "message",
             "content_type",
             "read_status",
+            "created_date",
             "post_id",
         ]
+        read_only_fields = ["id", "created_date"]
 
     def get_post_id(self, obj):
         # Kiểm tra nếu content_object là Post, trả về id của Post
